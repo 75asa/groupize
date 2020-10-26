@@ -1,8 +1,8 @@
 import { SystemConst } from "../../const";
-import { View } from "../../types/blocks/modal";
+import { ModalView } from "../../types/blocks/modal";
 import { ViewsOpenArguments } from "@slack/web-api/dist/methods";
 
-export const getView = ({ context, trigger_id }: View): ViewsOpenArguments => {
+export const getView = ({ context, trigger_id }: ModalView): ViewsOpenArguments => {
   return {
     token: context.botToken,
     trigger_id: trigger_id as string,

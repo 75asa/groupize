@@ -1,28 +1,28 @@
 import { App } from "@slack/bolt";
-import { modalArgs } from "../../types/common";
-import * as db from "../../db/putGroup"
+import * as db from "../../db/putGroup";
 import { SystemConst } from "../../const";
-import * as newModal from "../blocks/new-modal"
+import * as newModal from "../blocks/new-modal";
+import { ModalView } from "../../types/blocks/modal";
 
-export const openRegisterModal = async ({ app, trigger_id, context }: modalArgs) => {
-  await app.client.views.open(newModal.getView({ context, trigger_id }));
+export const tryOpenModal = async ({ app, trigger_id, context, isUpdated }: ModalView) => {
+  try {
+    if (app === undefined) {
+      new Error("hoge");
+    } else if (isUpdated) {
+      await app.client.views.push(newModal.getView({ context, trigger_id }));
+    } else {
+      await app.client.views.open(newModal.getView({ context, trigger_id }));
+    }
+  } catch (error) {
+    console.error(error);
+  }
 };
 
-export const useGroupizeNewCommand = (app: App) => {
-  app.command(SystemConst.GroupizeNew.COMMAND_NAME, async ({ ack, body, context, command }) => {
-    await ack();
-    try {
-      await openRegisterModal({
-        app,
-        trigger_id: body.trigger_id,
-        context,
-        private_metadata: command.channel_id,
-      });
-    } catch (error) {
-      console.error(error);
-    }
-  });
-
+/**
+ * modal response を受け取る
+ * @param app - App
+ */
+export const catchModalResponse = async (app: App) => {
   app.view(SystemConst.GroupizeNew.VIEW_ID, async ({ ack, view }) => {
     await ack();
     const channelId = view.private_metadata;
@@ -37,7 +37,26 @@ export const useGroupizeNewCommand = (app: App) => {
 
     const res = await db.putGroup(groupName, groupUsers);
 
-    console.log({ res })
-
+    console.log({ res });
   });
+};
+
+/**
+ * slash command から呼び出される groupize-new
+ * @param app - App
+ */
+export const useGroupizeNewCommand = (app: App) => {
+  app.command(
+    SystemConst.GroupizeNew.COMMAND_NAME,
+    async ({ ack, body, context, command }) => {
+      await ack();
+      tryOpenModal({
+        app,
+        trigger_id: body.trigger_id,
+        context,
+        channel_id: command.channel_id,
+      });
+    }
+  );
+  catchModalResponse(app);
 };
